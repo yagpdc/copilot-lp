@@ -20,11 +20,11 @@ python -m http.server 4321
 
 ## Notas técnicas
 
-- **Tipografia:** Syne (display) + Inter (corpo) + Space Grotesk (mono), via Google Fonts.
-- **Paleta:** roxo, rosa, laranja e azul claro sobre fundo quase preto, com grão de filme e vinheta.
-- **Atos:** loader → hook → tensão → virada → o produto ao vivo (mock WhatsApp) → montagem horizontal das 16 capacidades → números → finale.
-- **Smooth scroll** via Lenis (carregado de forma assíncrona; cai para scroll nativo se indisponível).
-- **Sem dependências de build.** Pronto para GitHub Pages.
+- **Tipografia:** Bricolage Grotesque (display) + Inter (corpo) + Space Grotesk (mono), via Google Fonts.
+- **Identidade Driva:** laranja `#f07f2d` + azul-marinho `#003355` como base, com roxo/rosa como acentos vibrantes, grão de filme e vinheta.
+- **Cursor:** a própria logo da Driva — branca no escuro, vira colorida e cresce (com rótulo "Agendar") nos CTAs.
+- **Atos:** loader → hook → tensão → virada → demo ao vivo no WhatsApp → grid de capacidades (cada feature como um momento de WhatsApp) → números → finale.
+- **Sem build e sem CDN.** Tudo inline em um arquivo; funciona offline. Pronto para GitHub Pages.
 
 ## Deploy (GitHub Pages)
 
