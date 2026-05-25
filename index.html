@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driva Copilot — o mercado inteiro, numa conversa</title>
+<meta name="description" content="Uma experiência. O copiloto de IA da Driva que prospecta, investiga e age sobre toda a base comercial do Brasil — no seu WhatsApp.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===================== TOKENS / RESET ===================== */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#060409; --bg2:#0a0712;
+  --fg:#f3eefb; --dim:#9b8fb5; --faint:#5d5375;
+  --purple:#8b5cf6; --violet:#6d28d9; --pink:#ec4899; --magenta:#f472b6;
+  --orange:#fb8c3a; --orange-d:#f97316; --cyan:#42c9ff; --blue:#1591de;
+  --disp:'Syne',sans-serif; --body:'Inter',sans-serif; --mono:'Space Grotesk',monospace;
+}
+html{-webkit-font-smoothing:antialiased;background:var(--bg)}
+body{font-family:var(--body);color:var(--fg);background:var(--bg);overflow-x:hidden}
+body.lock{overflow:hidden;height:100vh}
+a{color:inherit;text-decoration:none}
+svg,img{display:block}
+::selection{background:var(--pink);color:#0a0712}
+h1,h2,h3{font-family:var(--disp);font-weight:800;letter-spacing:-.03em;line-height:.92}
+
+/* ===================== FILM LAYERS (grain + vignette) ===================== */
+.grain{position:fixed;inset:-50%;z-index:9000;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grain 6s steps(6) infinite}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-4%,3%)}40%{transform:translate(3%,-5%)}60%{transform:translate(-5%,2%)}80%{transform:translate(4%,4%)}100%{transform:translate(0,0)}}
+.vignette{position:fixed;inset:0;z-index:8000;pointer-events:none;
+  box-shadow:inset 0 0 220px 40px rgba(0,0,0,.85),inset 0 0 60px rgba(0,0,0,.4)}
+.scanline{position:fixed;inset:0;z-index:7900;pointer-events:none;opacity:.12;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.16) 3px)}
+
+/* ===================== CUSTOM CURSOR ===================== */
+.cur,.cur-r{position:fixed;top:0;left:0;z-index:9500;pointer-events:none;border-radius:50%;mix-blend-mode:difference;will-change:transform}
+.cur{width:7px;height:7px;background:#fff;margin:-3.5px 0 0 -3.5px}
+.cur-r{width:38px;height:38px;border:1px solid rgba(255,255,255,.6);margin:-19px 0 0 -19px;transition:width .25s,height .25s,margin .25s,opacity .25s}
+.cur-r.big{width:74px;height:74px;margin:-37px 0 0 -37px;background:rgba(255,255,255,.05)}
+@media(hover:none),(max-width:820px){.cur,.cur-r{display:none}}
+
+/* ===================== LOADER ===================== */
+#loader{position:fixed;inset:0;z-index:10000;background:#050308;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px}
+#loader.up{transform:translateY(-101%);transition:transform 1.05s cubic-bezier(.76,0,.24,1)}
+.ld-top{font-family:var(--mono);font-size:12px;letter-spacing:.45em;color:var(--dim);text-transform:uppercase;opacity:0;animation:fade .8s .15s forwards}
+.ld-count{font-family:var(--disp);font-weight:800;font-size:clamp(70px,16vw,190px);line-height:1;letter-spacing:-.04em;
+  background:linear-gradient(100deg,#fff,var(--magenta) 60%,var(--orange));-webkit-background-clip:text;background-clip:text;color:transparent}
+.ld-bar{width:min(360px,60vw);height:1px;background:rgba(255,255,255,.14);position:relative;overflow:hidden}
+.ld-bar i{position:absolute;inset:0;transform-origin:left;transform:scaleX(0);background:linear-gradient(90deg,var(--violet),var(--pink),var(--orange))}
+.ld-word{font-family:var(--mono);font-size:12px;letter-spacing:.3em;color:var(--faint);text-transform:uppercase}
+@keyframes fade{to{opacity:1}}
+
+/* ===================== AMBIENT BG ===================== */
+.amb{position:fixed;inset:0;z-index:-2;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,var(--bg2),var(--bg) 70%)}
+.glow{position:absolute;border-radius:50%;filter:blur(110px);opacity:.4;will-change:transform}
+.g1{width:50vw;height:50vw;left:-12vw;top:-10vw;background:radial-gradient(circle,var(--violet),transparent 65%);animation:fl1 30s ease-in-out infinite}
+.g2{width:46vw;height:46vw;right:-10vw;top:6vw;background:radial-gradient(circle,var(--pink),transparent 65%);animation:fl2 36s ease-in-out infinite}
+.g3{width:55vw;height:55vw;left:25vw;bottom:-20vw;background:radial-gradient(circle,var(--blue),transparent 62%);opacity:.3;animation:fl1 40s ease-in-out infinite reverse}
+@keyframes fl1{0%,100%{transform:translate(0,0)}50%{transform:translate(6vw,5vw)}}
+@keyframes fl2{0%,100%{transform:translate(0,0)}50%{transform:translate(-5vw,6vw)}}
+
+/* ===================== FIXED HUD ===================== */
+.hud{position:fixed;z-index:6000;font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);mix-blend-mode:difference}
+.hud.brand{top:30px;left:34px;display:flex;align-items:center;gap:10px}
+.hud.brand svg{width:17px;height:22px}
+.hud.brand b{color:#fff;letter-spacing:.18em}
+.hud.scene{top:30px;right:34px;color:#fff}
+.hud.scene .cur-n{font-family:var(--disp);font-weight:800;font-size:15px;letter-spacing:0}
+.progress{position:fixed;top:0;left:0;height:2px;z-index:6100;width:100%;transform:scaleX(0);transform-origin:left;
+  background:linear-gradient(90deg,var(--violet),var(--pink),var(--orange))}
+.hud-cta{position:fixed;bottom:30px;right:34px;z-index:6000}
+.cta-btn{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#0a0712;
+  background:linear-gradient(100deg,var(--magenta),var(--orange));padding:13px 22px;border-radius:99px;display:inline-flex;align-items:center;gap:9px;
+  transition:transform .3s cubic-bezier(.2,.8,.25,1),box-shadow .3s;box-shadow:0 10px 34px -10px rgba(236,72,153,.7);will-change:transform}
+.cta-btn:hover{box-shadow:0 16px 44px -10px rgba(236,72,153,.85)}
+@media(max-width:820px){.hud.brand{left:20px;top:22px}.hud.scene{right:20px;top:22px}.hud-cta{right:20px;bottom:20px}}
+
+/* ===================== ACT / SCENE BASE ===================== */
+.act{position:relative;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:120px 7vw}
+.over{font-family:var(--mono);font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:var(--magenta);margin-bottom:34px;display:flex;align-items:center;gap:14px}
+.over::before{content:"";width:42px;height:1px;background:var(--magenta)}
+
+/* mask reveal */
+.line{display:block;overflow:hidden}
+.line>span{display:block;transform:translateY(110%);transition:transform 1.05s cubic-bezier(.16,1,.3,1)}
+.line.in>span{transform:translateY(0)}
+.line.d1>span{transition-delay:.07s}.line.d2>span{transition-delay:.14s}.line.d3>span{transition-delay:.21s}.line.d4>span{transition-delay:.28s}
+.fade{opacity:0;transform:translateY(24px);transition:opacity 1s ease .15s,transform 1s cubic-bezier(.16,1,.3,1) .15s}
+.fade.in{opacity:1;transform:none}
+
+.grad{background:linear-gradient(100deg,var(--magenta),var(--purple) 45%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.grad-w{background:linear-gradient(100deg,var(--orange),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.outline{-webkit-text-stroke:1.4px rgba(243,238,251,.55);color:transparent}
+
+/* ===================== ACT 1 — HERO ===================== */
+.hero h1{font-size:clamp(46px,8.2vw,158px)}
+.hero .sub{font-family:var(--body);font-weight:400;font-size:clamp(16px,1.7vw,22px);color:var(--dim);max-width:560px;margin-top:38px;line-height:1.5}
+.hero .sub b{color:#fff;font-weight:600}
+.scrollcue{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--dim);text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:12px}
+.scrollcue .ln{width:1px;height:46px;background:linear-gradient(var(--magenta),transparent);animation:cue 1.8s ease-in-out infinite}
+@keyframes cue{0%,100%{transform:scaleY(.4);opacity:.4;transform-origin:top}50%{transform:scaleY(1);opacity:1;transform-origin:top}}
+
+/* ===================== STATEMENT ACTS ===================== */
+.statement{align-items:center;text-align:center}
+.statement h2{font-size:clamp(40px,8vw,128px);max-width:14ch}
+.statement .small{font-family:var(--mono);font-size:13px;letter-spacing:.28em;text-transform:uppercase;color:var(--faint);margin-top:34px}
+
+/* ===================== ACT — PHONE (star) ===================== */
+.star{display:grid;grid-template-columns:1.1fr .9fr;gap:5vw;align-items:center;min-height:100vh}
+.star .copy h2{font-size:clamp(40px,5.6vw,86px);margin-bottom:30px}
+.scene-label{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--magenta);margin-bottom:14px;transition:opacity .4s,transform .4s}
+.scene-desc{font-size:clamp(15px,1.5vw,19px);color:var(--dim);max-width:440px;line-height:1.55;transition:opacity .4s,transform .4s}
+.scene-desc b{color:#fff;font-weight:600}
+.scene-label.swap,.scene-desc.swap{opacity:0;transform:translateY(10px)}
+.dots{display:flex;gap:10px;margin-top:30px}
+.dots button{height:8px;width:8px;border-radius:99px;border:none;cursor:none;background:rgba(255,255,255,.2);transition:all .3s;padding:0}
+.dots button.active{width:30px;background:linear-gradient(90deg,var(--pink),var(--orange))}
+
+/* phone */
+.phone-stage{display:flex;justify-content:center;position:relative}
+.phone-halo{position:absolute;width:440px;height:440px;border-radius:50%;filter:blur(80px);opacity:.5;top:50%;left:50%;transform:translate(-50%,-50%);z-index:0;
+  background:conic-gradient(from 0deg,var(--violet),var(--pink),var(--orange),var(--cyan),var(--violet));animation:spin 20s linear infinite}
+@keyframes spin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.phone{width:330px;height:678px;border-radius:46px;padding:6px;position:relative;cursor:none;z-index:1;
+  background:linear-gradient(160deg,#2a2440,#120f1f);box-shadow:0 60px 120px -36px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.10),inset 0 0 0 1px rgba(255,255,255,.05)}
+.island{position:absolute;top:15px;left:50%;transform:translateX(-50%);width:90px;height:21px;background:#000;border-radius:99px;z-index:6}
+.pause-pill{position:absolute;top:44px;right:16px;z-index:7;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:99px;display:flex;align-items:center;gap:5px;opacity:0;transition:opacity .25s;pointer-events:none}
+.phone.paused .pause-pill{opacity:1}
+.screen{width:100%;height:100%;border-radius:40px;overflow:hidden;display:flex;flex-direction:column;background:#efeae2}
+.wa-header{background:#008069;padding:34px 16px 13px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.wa-avatar{width:40px;height:40px;border-radius:99px;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.wa-title{font-size:15px;font-weight:600;color:#fff;line-height:1.2;font-family:var(--body)}
+.wa-sub{font-size:11px;color:rgba(255,255,255,.78)}.wa-sub .on{color:#c5f0c5}
+.wa-body{flex:1;padding:16px 14px;display:flex;flex-direction:column;gap:9px;overflow-y:auto;
+  background-image:linear-gradient(rgba(229,221,213,.55),rgba(229,221,213,.55)),url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23d4ccc0'/%3E%3C/svg%3E")}
+.wa-body::-webkit-scrollbar{width:0}
+.bubble{max-width:88%;border-radius:9px;padding:8px 11px;font-size:13.5px;line-height:1.45;color:#111b21;box-shadow:0 1px 1px rgba(0,0,0,.08);animation:pop .3s ease-out;white-space:pre-wrap;font-family:var(--body)}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.row{display:flex}.row.user{justify-content:flex-end}.row.bot{justify-content:flex-start}
+.bubble.user{background:#d9fdd3;border-top-right-radius:2px}.bubble.bot{background:#fff;border-top-left-radius:2px}
+.meta{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:3px}.meta .time{font-size:9px;color:#667781}.meta .check{color:#53bdeb;font-size:11px}
+.card{border-radius:9px;overflow:hidden;margin:2px 0 4px;border:1px solid #ececec}
+.card-head{display:flex;align-items:center;gap:7px;padding:8px 10px;font-size:12px;font-weight:700;font-family:var(--body)}
+.card-head.alert{background:#fef2f2;color:#b42318}.card-head.opp{background:#fff7ed;color:#c2410c}.card-head.data{background:#eff6ff;color:#1e5fb4}
+.card-body{background:#f7f7f7;padding:9px 11px;display:flex;flex-direction:column;gap:6px;font-family:var(--body)}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:12px}
+.kv .k{color:#6b7280}.kv .v{color:#111b21;font-weight:600;text-align:right}.kv .v.bad{color:#b42318}.kv .v.good{color:#15803d}
+.li{display:flex;gap:7px;font-size:12px;color:#374151;align-items:flex-start}.li .b{color:var(--pink);line-height:1.3}
+.pdf{display:flex;align-items:center;gap:9px;background:#fff;border-radius:9px;padding:9px;border:1px solid #ececec;margin:2px 0 4px}
+.pdf .ic{width:30px;height:36px;border-radius:6px;background:#e74c3c;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:9px;font-weight:700;font-family:var(--body)}
+.pdf .nm{font-size:12px;font-weight:600;color:#111b21;font-family:var(--body)}.pdf .sz{font-size:10px;color:#667781;font-family:var(--body)}
+.minimap{width:100%;height:auto;border-radius:8px;display:block;border:1px solid #e3e3e3}
+.qr{display:flex;flex-direction:column;gap:4px;margin-top:4px;width:88%}
+.qr div{background:#fff;border-radius:8px;text-align:center;padding:8px;font-size:12.5px;font-weight:600;color:#00a884;box-shadow:0 1px 1px rgba(0,0,0,.08);transition:all .18s;font-family:var(--body)}
+.qr div.pressed{background:#e7f8f0;color:#008069;transform:scale(.97)}
+.typing{background:#fff;border-radius:9px;border-top-left-radius:2px;padding:11px 14px;display:inline-flex;gap:4px;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.typing span{width:7px;height:7px;border-radius:99px;background:#9aa6ac;animation:tb 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes tb{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+.wa-input{background:#f0f2f5;padding:9px 12px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.wa-input .field{flex:1;background:#fff;border-radius:99px;padding:9px 14px;font-size:12px;color:#667781;font-family:var(--body)}
+.wa-input .send{width:36px;height:36px;border-radius:99px;background:#008069;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* ===================== ACT — HORIZONTAL MONTAGE ===================== */
+.montage{position:relative}
+.montage-sticky{position:sticky;top:0;height:100vh;overflow:hidden;display:flex;align-items:center}
+.track{display:flex;height:100vh;will-change:transform}
+.frame{width:100vw;height:100vh;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;padding:120px 7vw}
+.frame .fidx{font-family:var(--mono);font-size:13px;letter-spacing:.3em;color:var(--faint);margin-bottom:24px}
+.frame h3{font-size:clamp(48px,8.5vw,150px);margin-bottom:8px}
+.frame .ftag{font-family:var(--mono);font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--magenta);margin-bottom:30px}
+.frame .fline{font-family:var(--body);font-size:clamp(17px,2vw,26px);color:var(--dim);max-width:620px;line-height:1.45;margin-bottom:40px}
+.frame .fline b{color:#fff;font-weight:600}
+.tools{display:flex;flex-wrap:wrap;gap:12px;max-width:780px}
+.tool{font-family:var(--mono);font-size:14px;color:var(--fg);padding:11px 18px;border:1px solid rgba(255,255,255,.14);border-radius:99px;display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.03)}
+.tool .d{width:6px;height:6px;border-radius:99px;background:var(--c,var(--pink))}
+.frame.intro{align-items:center;text-align:center}
+.frame.intro h3{font-size:clamp(44px,9vw,170px);max-width:none}
+.frame.intro .fline{margin:0 auto}
+@media(max-width:820px){
+  .montage-sticky{position:static;height:auto}
+  .track{flex-direction:column;height:auto}
+  .frame{width:100%;height:auto;min-height:90vh}
+}
+
+/* ===================== ACT — NUMBERS ===================== */
+.numbers{align-items:center;text-align:center}
+.numbers .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:50px;width:100%;max-width:1100px;margin-top:20px}
+.numbers .n .v{font-family:var(--disp);font-weight:800;font-size:clamp(48px,7vw,104px);line-height:1;
+  background:linear-gradient(120deg,#fff,var(--magenta) 60%,var(--orange));-webkit-background-clip:text;background-clip:text;color:transparent}
+.numbers .n .l{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-top:18px;line-height:1.5}
+@media(max-width:820px){.numbers .grid{grid-template-columns:repeat(2,1fr);gap:40px}}
+
+/* ===================== ACT — FINALE ===================== */
+.finale{align-items:center;text-align:center;justify-content:center}
+.finale h2{font-size:clamp(46px,10vw,170px);max-width:16ch}
+.finale .big-cta{margin-top:48px;font-family:var(--mono);font-size:15px;letter-spacing:.16em;text-transform:uppercase;color:#0a0712;
+  background:linear-gradient(100deg,var(--magenta),var(--orange));padding:20px 40px;border-radius:99px;display:inline-flex;align-items:center;gap:12px;
+  box-shadow:0 18px 50px -12px rgba(236,72,153,.7);transition:transform .3s,box-shadow .3s;will-change:transform}
+.finale .foot{margin-top:90px;font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);display:flex;gap:30px;flex-wrap:wrap;justify-content:center}
+.finale .foot a:hover{color:#fff}
+
+/* ===================== RESPONSIVE ===================== */
+@media(max-width:900px){
+  .star{grid-template-columns:1fr;gap:60px;text-align:center;padding-top:120px;padding-bottom:90px}
+  .star .copy{order:1}.phone-stage{order:2}
+  .scene-desc{margin:0 auto}.dots{justify-content:center}
+  .act{padding:110px 8vw}
+}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.001s!important}}
+</style>
+</head>
+<body class="lock">
+
+<!-- film layers -->
+<div class="grain"></div>
+<div class="scanline"></div>
+<div class="vignette"></div>
+<div class="cur"></div><div class="cur-r"></div>
+
+<!-- ambient -->
+<div class="amb"><div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div></div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-top">Driva · Copilot</div>
+  <div class="ld-count" id="ldCount">0</div>
+  <div class="ld-bar"><i id="ldBar"></i></div>
+  <div class="ld-word" id="ldWord">carregando inteligência</div>
+</div>
+
+<!-- HUD -->
+<div class="progress" id="prog"></div>
+<a class="hud brand" href="#top">
+  <svg viewBox="0 0 18 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.9 22.07c-.24.51-.85.73-1.37.49-.16-.07-.29-.18-.39-.32l-.03-.05L6.4 8.47 16.3.24c.31-.25.73-.32 1.1-.15.37.17.59.53.6.92v20.68c-.01.13-.04.25-.1.37Z" fill="#fff"/>
+    <path d="M10.96 14.92a.93.93 0 0 0-.39-.31.93.93 0 0 0-.49-.1l-.08.01-8.83.77-.08.01a.93.93 0 0 1-.49-.11c-.52-.24-.75-.85-.5-1.37.05-.12.13-.22.21-.3l.12-.1L6.4 8.47l4.56 6.45Z" fill="#fff" opacity=".62"/>
+    <path d="M11.39 20.01c-.06.13-.14.24-.24.33l-.05.04-3.67 3.05c-.3.23-.71.29-1.07.12a1.05 1.05 0 0 1-.6-.87v-4.83c.01-.13.04-.27.1-.39.15-.32.45-.53.78-.58l.13-.01 2.28-.2c.17-.01.34.02.5.1.16.07.29.18.39.31l1.39 1.96c.18.29.21.65.06.97Z" fill="#f97316"/>
+  </svg>
+  <span><b>DRIVA</b> Copilot</span>
+</a>
+<div class="hud scene"><span class="cur-n" id="sceneN">01</span> / 07</div>
+<a class="hud-cta" href="https://driva.io" target="_blank" rel="noopener" data-magnet><span class="cta-btn">Agendar demo →</span></a>
+
+<!-- ============================ ACT 1 — HERO ============================ -->
+<section class="act hero" id="top" data-scene="01">
+  <div class="over fade">A IA Comercial da Driva</div>
+  <h1>
+    <span class="line"><span>O mercado</span></span>
+    <span class="line d1"><span>inteiro.</span></span>
+    <span class="line d2"><span class="grad">Numa conversa.</span></span>
+  </h1>
+  <p class="sub fade">O copiloto de IA que <b>prospecta, investiga e age</b> sobre cada CNPJ do país — e responde onde seu time já trabalha: no <b>WhatsApp</b>.</p>
+  <div class="scrollcue"><span>role</span><span class="ln"></span></div>
+</section>
+
+<!-- ============================ ACT 2 — TENSION ============================ -->
+<section class="act statement" data-scene="02">
+  <h2>
+    <span class="line"><span>Sua equipe fala com</span></span>
+    <span class="line d1"><span class="outline">uma empresa</span> por vez.</span>
+  </h2>
+  <div class="small fade">são 60 milhões de CNPJs lá fora</div>
+</section>
+
+<!-- ============================ ACT 3 — FLIP ============================ -->
+<section class="act statement" data-scene="03">
+  <h2>
+    <span class="line"><span>O Copilot fala</span></span>
+    <span class="line d1"><span class="grad">com todas.</span></span>
+  </h2>
+  <div class="small fade">ao mesmo tempo · em tempo real</div>
+</section>
+
+<!-- ============================ ACT 4 — THE STAR (phone) ============================ -->
+<section class="act" data-scene="04" id="demo">
+  <div class="star">
+    <div class="copy">
+      <div class="over fade">Ao vivo</div>
+      <h2>
+        <span class="line"><span>Você pergunta.</span></span>
+        <span class="line d1"><span class="grad-w">Ele age.</span></span>
+      </h2>
+      <div class="fade">
+        <div class="scene-label" id="sceneLabel">Encontrar empresas</div>
+        <p class="scene-desc" id="sceneDesc">Descreva o cliente ideal em <b>linguagem natural</b>. O Copilot traduz em filtros e varre a base inteira em segundos.</p>
+        <div class="dots" id="dots"></div>
+      </div>
+    </div>
+    <div class="phone-stage fade">
+      <div class="phone-halo"></div>
+      <div class="phone" id="phone">
+        <div class="island"></div>
+        <div class="pause-pill">⏸ pausado</div>
+        <div class="screen">
+          <div class="wa-header">
+            <div class="wa-avatar">
+              <svg width="17" height="23" viewBox="0 0 18 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="position:relative;left:-2px">
+                <path d="M17.9 22.07c-.24.51-.85.73-1.37.49l-.42-.36L6.4 8.47 16.3.24c.31-.25.73-.32 1.1-.15.37.17.59.53.6.92v20.68c-.01.13-.04.25-.1.37Z" fill="#003355"/>
+                <path d="M10.96 14.92a.93.93 0 0 0-.39-.31.93.93 0 0 0-.49-.1l-8.91.77a.93.93 0 0 1-.49-.11c-.52-.24-.75-.85-.5-1.37.05-.12.13-.22.21-.3L6.4 8.47l4.56 6.45Z" fill="#003355" opacity=".7"/>
+                <path d="M11.39 20.01c-.06.13-.14.24-.24.33l-3.72 3.05c-.3.23-.71.29-1.07.12a1.05 1.05 0 0 1-.6-.87v-4.83c.01-.13.04-.27.1-.39.15-.32.45-.53.78-.58l2.41-.2c.17-.01.34.02.5.1.16.07.29.18.39.31l1.39 1.96c.18.29.21.65.06.97Z" fill="#F97316"/>
+              </svg>
+            </div>
+            <div><div class="wa-title">Driva Copilot</div><div class="wa-sub"><span class="on">●</span> online · IA de vendas</div></div>
+          </div>
+          <div class="wa-body" id="chat"></div>
+          <div class="wa-input">
+            <div class="field">Pergunte ao Copilot...</div>
+            <div class="send"><svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ACT 5 — MONTAGE (horizontal) ============================ -->
+<section class="montage" id="montage" data-scene="05">
+  <div class="montage-sticky">
+    <div class="track" id="track">
+
+      <div class="frame intro">
+        <div class="fidx">CAPACIDADES</div>
+        <h3><span class="outline">Não é uma</span><br>ferramenta.</h3>
+        <p class="fline" style="margin-top:24px">São <b>dezesseis especialistas</b> — e um copiloto que sabe qual chamar.</p>
+      </div>
+
+      <div class="frame">
+        <div class="fidx">01 — ENCONTRAR</div>
+        <h3 class="grad">Achar.</h3>
+        <p class="fline">Descreva o ICP do jeito que você fala. O Copilot vira filtros e <b>varre a base inteira</b>.</p>
+        <div class="tools">
+          <span class="tool" style="--c:#8b5cf6"><span class="d"></span>buscar_empresas_por_nomes</span>
+          <span class="tool" style="--c:#ec4899"><span class="d"></span>lidia_turbo</span>
+          <span class="tool" style="--c:#fb8c3a"><span class="d"></span>filter_nl</span>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="fidx">02 — INVESTIGAR</div>
+        <h3 class="grad">Saber.</h3>
+        <p class="fline">Tudo sobre a conta <b>antes do primeiro contato</b> — web, base analítica, processos e energia.</p>
+        <div class="tools">
+          <span class="tool" style="--c:#8b5cf6"><span class="d"></span>preparar_dossie</span>
+          <span class="tool" style="--c:#42c9ff"><span class="d"></span>deep_research</span>
+          <span class="tool" style="--c:#7c3aed"><span class="d"></span>clickhouse</span>
+          <span class="tool" style="--c:#ec4899"><span class="d"></span>consulta_judi</span>
+          <span class="tool" style="--c:#fb8c3a"><span class="d"></span>consulta_energia</span>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="fidx">03 — VISUALIZAR</div>
+        <h3 class="grad">Ver.</h3>
+        <p class="fline">O território, os clusters quentes e a hierarquia de quem decide — <b>em um olhar</b>.</p>
+        <div class="tools">
+          <span class="tool" style="--c:#ec4899"><span class="d"></span>map_visualizer</span>
+          <span class="tool" style="--c:#8b5cf6"><span class="d"></span>market_mapping</span>
+          <span class="tool" style="--c:#42c9ff"><span class="d"></span>orgchart_visualizer</span>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="fidx">04 — OPERAR</div>
+        <h3 class="grad">Agir.</h3>
+        <p class="fline">Da pergunta à execução <b>sem trocar de aba</b>. Reuniões do dia e notas no CRM, sozinho.</p>
+        <div class="tools">
+          <span class="tool" style="--c:#42c9ff"><span class="d"></span>reunioes_externas</span>
+          <span class="tool" style="--c:#fb8c3a"><span class="d"></span>adicionar_observacoes_crm</span>
+        </div>
+      </div>
+
+      <div class="frame">
+        <div class="fidx">05 — PLAYBOOKS</div>
+        <h3 class="grad-w">Antecipar.</h3>
+        <p class="fline">A IA que <b>age sozinha na sua carteira</b> — lê o RFV das notas e avisa antes da perda.</p>
+        <div class="tools">
+          <span class="tool" style="--c:#ec4899"><span class="d"></span>Positivação</span>
+          <span class="tool" style="--c:#8b5cf6"><span class="d"></span>Mix</span>
+          <span class="tool" style="--c:#42c9ff"><span class="d"></span>Empresas Abertas</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ACT 6 — NUMBERS ============================ -->
+<section class="act numbers" data-scene="06">
+  <div class="over fade" style="margin-left:auto;margin-right:auto">A escala</div>
+  <h2 style="font-size:clamp(36px,6vw,90px);margin-bottom:10px">
+    <span class="line"><span>Tudo na velocidade</span></span>
+    <span class="line d1"><span class="grad">da conversa.</span></span>
+  </h2>
+  <div class="grid">
+    <div class="n fade"><div class="v" data-count="100" data-suffix="%">0</div><div class="l">dos CNPJs do Brasil</div></div>
+    <div class="n fade"><div class="v" data-count="16" data-suffix="">0</div><div class="l">ferramentas de IA</div></div>
+    <div class="n fade"><div class="v" data-count="22" data-suffix="K+">0</div><div class="l">empresas usam a Driva</div></div>
+    <div class="n fade"><div class="v" data-count="24" data-suffix="/7">0</div><div class="l">proativo, sem pausa</div></div>
+  </div>
+</section>
+
+<!-- ============================ ACT 7 — FINALE ============================ -->
+<section class="act finale" data-scene="07">
+  <h2>
+    <span class="line"><span>Coloque o Copilot</span></span>
+    <span class="line d1"><span class="grad-w">pra trabalhar.</span></span>
+  </h2>
+  <a class="big-cta" href="https://driva.io" target="_blank" rel="noopener" data-magnet>Agendar demonstração →</a>
+  <div class="foot">
+    <a href="#top">Início</a>
+    <a href="#demo">Ver ao vivo</a>
+    <a href="https://driva.io" target="_blank" rel="noopener">driva.io</a>
+    <span>© Driva · Inteligência Comercial</span>
+  </div>
+</section>
+
+<script>
+/* ============================================================ LOADER */
+(function(){
+  const cnt=document.getElementById('ldCount'),bar=document.getElementById('ldBar'),word=document.getElementById('ldWord'),loader=document.getElementById('loader');
+  const words=['lendo a base','mapeando o mercado','cruzando sinais','quase lá'];
+  let p=0,wi=0;const dur=1900,t0=performance.now();
+  function tick(t){
+    const e=Math.min((t-t0)/dur,1);p=Math.round((1-Math.pow(1-e,2))*100);
+    cnt.textContent=p;bar.style.transform='scaleX('+(p/100)+')';
+    const ni=Math.min(words.length-1,Math.floor(e*words.length));if(ni!==wi){wi=ni;word.textContent=words[wi]}
+    if(e<1)requestAnimationFrame(tick);else finish();
+  }
+  function finish(){
+    word.textContent='pronto';
+    setTimeout(()=>{loader.classList.add('up');document.body.classList.remove('lock');start();
+      setTimeout(()=>loader.remove(),1100);},420);
+  }
+  requestAnimationFrame(tick);
+  // safety
+  setTimeout(()=>{if(document.getElementById('loader')&&!loader.classList.contains('up')){loader.classList.add('up');document.body.classList.remove('lock');start();setTimeout(()=>loader.remove(),1100)}},4000);
+})();
+
+let started=false;
+function start(){
+  if(started)return;started=true;
+  document.querySelectorAll('.hero .line,.hero .fade').forEach(el=>el.classList.add('in'));
+}
+
+/* ============================================================ SMOOTH SCROLL (Lenis, optional + non-blocking) */
+let lenis=null;
+(function loadLenis(){
+  const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js';
+  s.async=true;
+  s.onload=()=>{
+    if(!window.Lenis)return;
+    lenis=new Lenis({duration:1.15,easing:t=>Math.min(1,1.001-Math.pow(2,-10*t)),smoothWheel:true});
+    function raf(t){lenis.raf(t);requestAnimationFrame(raf)}requestAnimationFrame(raf);
+  };
+  document.head.appendChild(s);
+})();
+// anchor smooth-scroll works with or without Lenis
+document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{
+  const id=a.getAttribute('href');if(id.length>1){const el=document.querySelector(id);if(el){e.preventDefault();lenis?lenis.scrollTo(el):el.scrollIntoView({behavior:'smooth'})}}
+}));
+
+/* ============================================================ REVEAL ON ENTER */
+const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')})},{threshold:.25});
+document.querySelectorAll('.line,.fade').forEach(el=>{if(!el.closest('.hero'))io.observe(el)});
+
+/* ============================================================ SCENE COUNTER */
+const sceneN=document.getElementById('sceneN');
+const sceneIo=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting&&e.target.dataset.scene)sceneN.textContent=e.target.dataset.scene})},{threshold:.5});
+document.querySelectorAll('[data-scene]').forEach(el=>sceneIo.observe(el));
+
+/* ============================================================ COUNT-UP */
+const numIo=new IntersectionObserver((es)=>{es.forEach(e=>{if(!e.isIntersecting)return;numIo.unobserve(e.target);
+  const el=e.target,tg=+el.dataset.count,suf=el.dataset.suffix||'';let t0=null;
+  function s(t){if(!t0)t0=t;const p=Math.min((t-t0)/1500,1);el.textContent=Math.round((1-Math.pow(1-p,3))*tg)+suf;if(p<1)requestAnimationFrame(s)}
+  requestAnimationFrame(s);})},{threshold:.6});
+document.querySelectorAll('[data-count]').forEach(el=>numIo.observe(el));
+
+/* ============================================================ rAF: cursor + progress + parallax + montage */
+const curD=document.querySelector('.cur'),curR=document.querySelector('.cur-r'),prog=document.getElementById('prog');
+const montage=document.getElementById('montage'),track=document.getElementById('track');
+function sizeMontage(){
+  if(!montage||!track)return;
+  if(innerWidth>820){montage.style.height=(track.scrollWidth-innerWidth+innerHeight)+'px'}
+  else{montage.style.height='';track.style.transform=''}
+}
+sizeMontage();addEventListener('resize',sizeMontage);
+let mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;if(curD)curD.style.transform='translate('+mx+'px,'+my+'px)'},{passive:true});
+document.querySelectorAll('a,button,[data-magnet],.phone,.tool').forEach(el=>{
+  el.addEventListener('mouseenter',()=>curR&&curR.classList.add('big'));
+  el.addEventListener('mouseleave',()=>curR&&curR.classList.remove('big'));
+});
+// magnetic
+document.querySelectorAll('[data-magnet]').forEach(m=>{
+  const inner=m.firstElementChild||m;
+  m.addEventListener('mousemove',e=>{const r=m.getBoundingClientRect();const x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2;inner.style.transform='translate('+x*.3+'px,'+y*.3+'px)'});
+  m.addEventListener('mouseleave',()=>inner.style.transform='translate(0,0)');
+});
+function loop(){
+  rx+=(mx-rx)*.16;ry+=(my-ry)*.16;if(curR)curR.style.transform='translate('+rx+'px,'+ry+'px)';
+  const max=document.body.scrollHeight-innerHeight;const sp=max>0?scrollY/max:0;prog.style.transform='scaleX('+sp+')';
+  if(track&&innerWidth>820){
+    const r=montage.getBoundingClientRect();const h=montage.offsetHeight-innerHeight;
+    let p=h>0?(-r.top)/h:0;p=Math.max(0,Math.min(1,p));
+    const dist=track.scrollWidth-innerWidth;track.style.transform='translateX('+(-p*dist)+'px)';
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ============================================================ WHATSAPP PHONE ENGINE */
+const T='14:32';
+const MINIMAP=`<svg class="minimap" viewBox="0 0 240 132"><rect width="240" height="132" fill="#e9eff5"/><g stroke="#d2dbe5" stroke-width="2" fill="none"><path d="M0 42H240"/><path d="M0 92H240"/><path d="M62 0V132"/><path d="M162 0V132"/></g><g fill="#ec4899" opacity=".16"><circle cx="70" cy="50" r="20"/><circle cx="150" cy="40" r="16"/><circle cx="120" cy="95" r="22"/></g><g font-family="Inter" font-size="10" font-weight="700" fill="#fff" text-anchor="middle"><circle cx="70" cy="50" r="9" fill="#7c3aed"/><text x="70" y="54">A</text><circle cx="150" cy="40" r="9" fill="#ec4899"/><text x="150" y="44">B</text><circle cx="120" cy="95" r="9" fill="#fb8c3a"/><text x="120" y="99">C</text></g></svg>`;
+const SCENARIOS=[
+  {label:'Encontrar empresas',desc:'Descreva o cliente ideal em <b>linguagem natural</b>. O Copilot traduz em filtros e varre a base inteira em segundos.',
+   msgs:[
+     {s:'user',t:'transportadoras em SC com frota acima de 50 veículos e faturamento +R$10M',d:400},
+     {s:'bot',t:'Traduzi sua frase em filtros e busquei na base 👇',d:850},
+     {s:'bot',card:{head:'data',icon:'🎯',title:'127 empresas encontradas',li:['TRANSLOG SUL — Joinville · 84 veículos','RODOVALE LOGÍSTICA — Itajaí · 61 veículos','EXPRESSO CATARINA — Blumenau · 57 veículos']},d:1250},
+     {s:'bot',t:'Quer os decisores e um dossiê das 3 primeiras?',d:900},
+     {s:'bot',qr:['Gerar dossiês','Ver no mapa'],press:0,d:850},
+   ]},
+  {label:'Investigar a fundo',desc:'Um dossiê completo a partir de uma URL ou nome: <b>web + base + processos</b> cruzados, com o gancho de abordagem pronto.',
+   msgs:[
+     {s:'user',t:'prepara um dossiê do decisor da TRANSLOG SUL',d:400},
+     {s:'bot',t:'Cruzando web, base analítica e processos judiciais...',d:1050},
+     {s:'bot',pdf:{name:'Dossiê — TRANSLOG SUL.pdf',size:'PDF · Driva Copilot'},d:1200},
+     {s:'bot',t:'Decisor: Marcos Vianna (Dir. Operações, 8 anos na casa). Sem processos relevantes. Gancho: abriram filial em Curitiba.',d:1250},
+     {s:'bot',qr:['Abrir dossiê','Salvar no CRM'],press:1,d:850},
+     {s:'bot',t:'✓ Salvo no CRM com a nota e o gancho de abordagem.',d:900},
+   ]},
+  {label:'Ver o mercado',desc:'O Copilot plota sua carteira contra o mercado e <b>revela os clusters quentes</b> onde você ainda não tem presença.',
+   msgs:[
+     {s:'user',t:'onde estão meus clientes vs o mercado em SC?',d:400},
+     {s:'bot',t:'Montei o mapa de penetração 👇',d:900},
+     {s:'bot',card:{head:'opp',icon:'🗺️',title:'Penetração · Santa Catarina',map:true,kv:[['Cobertura atual','23%'],['Clusters sem você','3','bad'],['Potencial no mapa','+R$ 2,1M','good']]},d:1400},
+     {s:'bot',t:'Blumenau, Joinville e Chapecó concentram demanda e você não tem cliente lá. Monto a rota?',d:1200},
+     {s:'bot',qr:['Montar rota','Ver clusters'],press:0,d:850},
+   ]},
+  {label:'Agir na carteira',desc:'Não é só consulta. O Copilot <b>monitora o RFV</b> das suas notas e age sozinho quando um cliente valioso esfria.',
+   msgs:[
+     {s:'bot',t:'🔔 Bom dia, João! Um cliente de alto valor saiu do padrão de compra.',d:700},
+     {s:'bot',card:{head:'alert',icon:'⚠️',title:'Cliente valioso esfriando',kv:[['Cliente','SUPER KIKO'],['Perfil RFV','alto valor · alta freq.'],['Última compra','há 47 dias','bad'],['Ticket médio','R$ 28.500 / mês']]},d:1300},
+     {s:'bot',t:'Comprava toda quinzena, em volume — já passou de 3 ciclos sem nota. Vendedor: Carlos Mendes.',d:1150},
+     {s:'bot',qr:['Gerar abordagem','Acionar o Carlos'],press:0,d:850},
+     {s:'bot',t:'Pronto 👇 Retome com foco em reabastecimento e na condição de volume que ele já usava.',d:1300},
+   ]},
+];
+const chat=document.getElementById('chat'),descEl=document.getElementById('sceneDesc'),labelEl=document.getElementById('sceneLabel'),dotsEl=document.getElementById('dots');
+const phone=document.getElementById('phone');
+let runToken=0,paused=false,waiters=[];
+const gate=()=>paused?new Promise(r=>waiters.push(r)):Promise.resolve();
+function setPaused(p){paused=p;phone.classList.toggle('paused',p);if(!p){const w=waiters;waiters=[];w.forEach(r=>r())}}
+phone.addEventListener('click',()=>setPaused(!paused));
+SCENARIOS.forEach((_,i)=>{const b=document.createElement('button');b.onclick=()=>{setPaused(false);play(i)};dotsEl.appendChild(b)});
+const sleep=ms=>gate().then(()=>new Promise(r=>setTimeout(r,ms))).then(gate);
+function bubble(s,html){const row=document.createElement('div');row.className='row '+s;const b=document.createElement('div');b.className='bubble '+s;b.innerHTML=html+`<div class="meta"><span class="time">${T}</span>${s==='user'?'<span class="check">✓✓</span>':''}</div>`;row.appendChild(b);chat.appendChild(row);chat.scrollTop=chat.scrollHeight}
+function cardHTML(c){let inner='';if(c.map)inner+=MINIMAP;if(c.kv)inner+=c.kv.map(([k,v,cls])=>`<div class="kv"><span class="k">${k}</span><span class="v ${cls||''}">${v}</span></div>`).join('');if(c.li)inner+=c.li.map(x=>`<div class="li"><span class="b">▸</span><span>${x}</span></div>`).join('');return `<div class="card"><div class="card-head ${c.head}">${c.icon} ${c.title}</div><div class="card-body">${inner}</div></div>`}
+function pdfHTML(p){return `<div class="pdf"><div class="ic">PDF</div><div><div class="nm">${p.name}</div><div class="sz">${p.size}</div></div></div>`}
+async function typing(){const row=document.createElement('div');row.className='row bot';row.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';chat.appendChild(row);chat.scrollTop=chat.scrollHeight;await sleep(750);row.remove()}
+async function play(idx){
+  const my=++runToken;[...dotsEl.children].forEach((d,j)=>d.classList.toggle('active',j===idx));
+  const sc=SCENARIOS[idx];
+  descEl.classList.add('swap');labelEl.classList.add('swap');await sleep(350);if(my!==runToken)return;
+  descEl.innerHTML=sc.desc;labelEl.textContent=sc.label;descEl.classList.remove('swap');labelEl.classList.remove('swap');
+  chat.innerHTML='';await sleep(300);
+  for(const m of sc.msgs){
+    if(my!==runToken)return;if(m.s==='bot')await typing();if(my!==runToken)return;
+    await sleep(m.d||600);if(my!==runToken)return;
+    if(m.qr){const wrap=document.createElement('div');wrap.className='row bot';const qr=document.createElement('div');qr.className='qr';
+      qr.innerHTML=m.qr.map(x=>`<div>${x}</div>`).join('');wrap.appendChild(qr);chat.appendChild(wrap);chat.scrollTop=chat.scrollHeight;
+      await sleep(950);if(my!==runToken)return;
+      if(m.press!=null){qr.children[m.press].classList.add('pressed');await sleep(500);bubble('user',m.qr[m.press]);await sleep(400)}
+    }else{let html='';if(m.card)html+=cardHTML(m.card);if(m.pdf)html+=pdfHTML(m.pdf);if(m.t)html+=m.t;bubble(m.s,html)}
+  }
+  await sleep(3400);if(my!==runToken)return;play((idx+1)%SCENARIOS.length);
+}
+play(0);
+</script>
+</body>
+</html>
